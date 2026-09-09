@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>가계부</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #14151c;
+    --surface: #1b1d28;
+    --surface-2: #21232f;
+    --border: #2c2e3d;
+    --text: #ece9e1;
+    --text-dim: #8d90a3;
+    --gold: #c6a15b;
+    --gold-dim: #9c824a;
+    --income: #8fac8b;
+    --expense: #b5584b;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #app{
+    max-width: 1180px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 28px 20px 60px;
+    position: relative;
+  }
+
+  .layout{
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 32px;
+  }
+  .left-pane{
+    width: 100%;
+  }
+  .center-pane{
+    width: 100%;
+  }
+  @media (min-width: 860px){
+    .layout{ flex-direction: row; align-items: flex-start; }
+    .left-pane{ width: 360px; flex-shrink: 0; }
+    .center-pane{ flex: 1; position: sticky; top: 24px; }
+  }
+
+  /* ---------- Header / Balance ---------- */
+  .header{
+    text-align: center;
+    padding: 12px 0 28px;
+    animation: riseIn .6s ease both;
+  }
+  @keyframes riseIn{
+    from{ opacity:0; transform: translateY(8px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+  .label{
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+    margin-bottom: 6px;
+  }
+  .balance{
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-size: 44px;
+    color: var(--gold);
+    letter-spacing: -0.01em;
+  }
+  .balance span{ font-size: 22px; color: var(--gold-dim); margin-left: 2px; }
+
+  .stats-row{
+    display: flex;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-top: 22px;
+  }
+  .stat{
+    flex: 1;
+    padding: 14px 4px;
+    text-align: center;
+  }
+  .stat:first-child{ border-right: 1px solid var(--border); }
+  .stat-label{ font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .stat-value{ font-family: 'Fraunces', serif; font-size: 19px; font-weight: 500; }
+  .stat-value.income{ color: var(--income); }
+  .stat-value.expense{ color: var(--expense); }
+
+  /* ---------- Add trigger ---------- */
+  .add-trigger{
+    width: 100%;
+    margin-top: 20px;
+    padding: 13px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .add-trigger:hover{ border-color: var(--gold-dim); }
+  .add-trigger:active{ background: var(--surface-2); }
+
+  /* ---------- Form panel ---------- */
+  .panel{
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height .35s ease;
+  }
+  .panel.open{ max-height: 420px; }
+  .panel-inner{
+    margin-top: 14px;
+    padding: 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+
+  .type-toggle{
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .type-btn{
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: transparent;
+    cursor: pointer;
+    transition: all .15s ease;
+  }
+  .type-btn.active[data-type="expense"]{
+    border-color: var(--expense);
+    color: var(--expense);
+    background: rgba(181,88,75,0.1);
+  }
+  .type-btn.active[data-type="income"]{
+    border-color: var(--income);
+    color: var(--income);
+    background: rgba(143,172,139,0.1);
+  }
+
+  .field{ margin-bottom: 12px; }
+  .field label{
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .field input{
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+  }
+  .field input:focus{
+    outline: none;
+    border-color: var(--gold-dim);
+  }
+  .field input::-webkit-calendar-picker-indicator{ filter: invert(0.6); }
+
+  .save-btn{
+    width: 100%;
+    padding: 12px;
+    margin-top: 4px;
+    background: var(--gold);
+    border: none;
+    border-radius: 3px;
+    color: #14151c;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background .15s ease;
+  }
+  .save-btn:hover{ background: #d4af6a; }
+
+  .secondary-trigger{
+    width: 100%;
+    margin-top: 10px;
+    padding: 13px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--text-dim);
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .secondary-trigger:hover{ border-color: var(--gold-dim); color: var(--gold-dim); }
+  .secondary-trigger:disabled{ opacity: 0.5; cursor: default; }
+
+  .review-panel{ margin-top: 14px; }
+  .review-card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 16px;
+  }
+  .review-title{ font-size: 13px; color: var(--text-dim); margin-bottom: 12px; }
+  .review-item{
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .review-item:last-child{ border-bottom: none; }
+  .review-item input[type="checkbox"]{ width: 16px; height: 16px; accent-color: var(--gold); flex-shrink: 0; margin-top: 8px; }
+  .review-fields{ flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .review-row-top{ display: flex; gap: 6px; }
+  .review-type-btn{
+    padding: 6px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .review-type-btn.income{ color: var(--income); border-color: var(--income); }
+  .review-type-btn.expense{ color: var(--expense); border-color: var(--expense); }
+  .review-item input[type="text"], .review-item input[type="number"], .review-item input[type="date"]{
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    padding: 6px 8px;
+    min-width: 0;
+  }
+  .review-amount{ width: 80px; }
+  .review-date{ flex: 1; }
+  .review-memo{ width: 100%; }
+  .review-actions{ display: flex; gap: 8px; margin-top: 14px; }
+  .review-actions button{ flex: 1; }
+  .cancel-btn{
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 12px;
+    border-radius: 3px;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .loading-text{
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 14px;
+  }
+
+  /* ---------- Ledger list ---------- */
+  .ledger{ margin-top: 30px; }
+  .date-group{ margin-bottom: 22px; }
+  .date-heading{
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    padding-left: 2px;
+  }
+  .row{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    animation: rowIn .3s ease both;
+  }
+  @keyframes rowIn{
+    from{ opacity:0; transform: translateX(-4px); }
+    to{ opacity:1; transform: translateX(0); }
+  }
+  .row-memo{
+    font-size: 14px;
+    color: var(--text);
+  }
+  .row-memo.empty{ color: var(--text-dim); font-style: italic; }
+  .row-right{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .row-amount{
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .row-amount.income{ color: var(--income); }
+  .row-amount.expense{ color: var(--expense); }
+  .row-del{
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 16px;
+    cursor: pointer;
+    opacity: 0.45;
+    padding: 2px 4px;
+    transition: opacity .15s ease;
+  }
+  .row-del:hover{ opacity: 1; color: var(--expense); }
+
+  .empty-state{
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .empty-state .big{
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    color: var(--text);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  /* ---------- Selected date hint ---------- */
+  .selected-date-hint{
+    font-size: 12px;
+    color: var(--gold);
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ---------- Calendar ---------- */
+  .cal-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 22px;
+    margin-bottom: 14px;
+  }
+  .cal-nav{
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    width: 32px;
+    height: 32px;
+    border-radius: 3px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .cal-nav:hover{ border-color: var(--gold-dim); color: var(--gold-dim); }
+  .cal-title{
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    color: var(--text);
+  }
+  .cal-grid{
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .cal-weekday{
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    padding-bottom: 6px;
+  }
+  .cal-cell{
+    aspect-ratio: 1 / 1.05;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 4px 3px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow: hidden;
+  }
+  .cal-cell.empty{ border-color: transparent; }
+  .cal-cell.today{ border-color: var(--gold-dim); }
+  .cal-cell:not(.empty){ cursor: pointer; transition: border-color .12s ease, background .12s ease; }
+  .cal-cell:not(.empty):hover{ border-color: var(--gold-dim); }
+  .cal-cell.selected{ border-color: var(--gold); background: rgba(198,161,91,0.08); }
+  .cal-daynum{ font-size: 11px; color: var(--text-dim); }
+  .cal-cell.today .cal-daynum{ color: var(--gold); font-weight: 700; }
+  .cal-amt{
+    font-size: 8.5px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cal-amt.income{ color: var(--income); }
+  .cal-amt.expense{ color: var(--expense); }
+
+  /* ---------- Sync badge ---------- */
+  .sync-badge{
+    display: inline-block;
+    margin: 0 auto 14px;
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-dim);
+    font-family: 'Manrope', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .sync-badge:hover{ border-color: var(--gold-dim); color: var(--gold-dim); }
+
+  /* ---------- Setup screen ---------- */
+  .setup-screen{
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    min-height: 100%;
+    background: var(--bg);
+    z-index: 100;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 60px 24px 120px;
+  }
+  .setup-card{
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 24px;
+  }
+  .setup-title{
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    color: var(--gold);
+    margin-bottom: 14px;
+  }
+  .setup-desc{
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .setup-error{
+    background: rgba(181,88,75,0.12);
+    border: 1px solid var(--expense);
+    color: var(--expense);
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 10px 12px;
+    border-radius: 3px;
+    margin-bottom: 14px;
+  }
+  .setup-step textarea, .setup-step input[type="text"]{
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    margin-bottom: 12px;
+    resize: vertical;
+  }
+  .setup-actions{ display: flex; gap: 8px; }
+  .setup-actions button{ flex: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+<div id="setupScreen" class="setup-screen">
+  <div class="setup-card">
+    <div class="setup-title">가계부 동기화 설정</div>
+    <div class="setup-error" id="setupError" style="display:none"></div>
+    <div class="setup-step" id="setupStep1">
+      <p class="setup-desc">Firebase 콘솔에서 만든 프로젝트의 설정 값(firebaseConfig)을 붙여넣으세요.</p>
+      <textarea id="configInput" rows="7" placeholder='{"apiKey": "...", "authDomain": "...", "projectId": "...", ...}'></textarea>
+      <button class="save-btn" id="configSaveBtn" type="button">다음</button>
+    </div>
+    <div class="setup-step" id="setupStep2" style="display:none">
+      <p class="setup-desc">동기화 코드를 새로 만들거나, 다른 기기에서 쓰던 코드를 입력하세요. 같은 코드를 쓰는 기기끼리 기록이 실시간으로 공유돼요.</p>
+      <input type="text" id="codeInput" placeholder="예: AB3F9K">
+      <div class="setup-actions">
+        <button class="cancel-btn" id="generateCodeBtn" type="button">코드 새로 만들기</button>
+        <button class="save-btn" id="codeSaveBtn" type="button">시작하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <div class="layout">
+  <div class="left-pane">
+    <div class="header">
+      <button class="sync-badge" id="syncBadge" type="button">동기화 설정</button>
+      <div class="label">전체 잔액</div>
+      <div class="balance" id="balanceEl">0<span>원</span></div>
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-label">이번 달 수입</div>
+          <div class="stat-value income" id="monthIncomeEl">0원</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">이번 달 지출</div>
+          <div class="stat-value expense" id="monthExpenseEl">0원</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="add-trigger" id="addTrigger">+ 새 기록 추가</button>
+    <button class="secondary-trigger" id="screenshotTrigger">스크린샷으로 인식하기</button>
+    <input type="file" accept="image/*" id="screenshotInput" style="display:none">
+    <div class="review-panel" id="reviewPanel"></div>
+
+    <div class="panel" id="panel">
+      <div class="panel-inner">
+        <div class="selected-date-hint" id="selectedDateHint" style="display:none"></div>
+        <div class="type-toggle">
+          <button class="type-btn active" data-type="expense" id="typeExpense">지출</button>
+          <button class="type-btn" data-type="income" id="typeIncome">수입</button>
+        </div>
+        <div class="field">
+          <label for="amountInput">금액</label>
+          <input type="number" id="amountInput" placeholder="0" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="memoInput">메모 (선택)</label>
+          <input type="text" id="memoInput" placeholder="예: 점심 식사">
+        </div>
+        <div class="field">
+          <label for="dateInput">날짜</label>
+          <input type="date" id="dateInput">
+        </div>
+        <button class="save-btn" id="saveBtn">저장하기</button>
+      </div>
+    </div>
+
+    <div id="listView">
+      <div class="ledger" id="ledgerEl"></div>
+    </div>
+  </div>
+
+  <div class="center-pane">
+    <div class="cal-header">
+      <button class="cal-nav" id="calPrev">‹</button>
+      <div class="cal-title" id="calTitle"></div>
+      <button class="cal-nav" id="calNext">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  window.addEventListener('error', function(e){
+    const bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#b5584b;color:#fff;font-family:monospace;font-size:12px;line-height:1.5;padding:10px 12px;white-space:pre-wrap;';
+    bar.textContent = '오류 발생: ' + e.message + '  [' + (e.filename||'').split('/').pop() + ':' + e.lineno + ']';
+    document.body.appendChild(bar);
+  });
+  (function(){
+    const ok = document.createElement('div');
+    ok.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99998;background:#8fac8b;color:#14151c;font-family:monospace;font-size:12px;padding:8px 12px;text-align:center;';
+    ok.textContent = '스크립트 로드 완료 (이 초록 배너가 안 보이면 스크립트 자체가 실행 안 된 것)';
+    document.body.appendChild(ok);
+    setTimeout(() => ok.remove(), 4000);
+  })();
+
+  let transactions = [];
+  let currentType = 'expense';
+  const LS_CONFIG_KEY = 'ledgerFirebaseConfig';
+  const LS_CODE_KEY = 'ledgerSyncCode';
+  let db = null;
+  let syncCode = null;
+
+  function lsGet(key){
+    try{ return localStorage.getItem(key); }catch(e){ return null; }
+  }
+  function lsSet(key, value){
+    try{ localStorage.setItem(key, value); return true; }catch(e){ return false; }
+  }
+
+  const balanceEl = document.getElementById('balanceEl');
+  const monthIncomeEl = document.getElementById('monthIncomeEl');
+  const monthExpenseEl = document.getElementById('monthExpenseEl');
+  const ledgerEl = document.getElementById('ledgerEl');
+  const panel = document.getElementById('panel');
+  const addTrigger = document.getElementById('addTrigger');
+  const typeExpense = document.getElementById('typeExpense');
+  const typeIncome = document.getElementById('typeIncome');
+  const amountInput = document.getElementById('amountInput');
+  const memoInput = document.getElementById('memoInput');
+  const dateInput = document.getElementById('dateInput');
+  const saveBtn = document.getElementById('saveBtn');
+  const syncBadge = document.getElementById('syncBadge');
+  const setupScreen = document.getElementById('setupScreen');
+  const setupStep1 = document.getElementById('setupStep1');
+  const setupStep2 = document.getElementById('setupStep2');
+  const configInput = document.getElementById('configInput');
+  const codeInput = document.getElementById('codeInput');
+  const setupError = document.getElementById('setupError');
+
+  function showSetupError(msg){
+    setupError.textContent = msg;
+    setupError.style.display = '';
+  }
+  function clearSetupError(){
+    setupError.style.display = 'none';
+  }
+
+  function todayStr(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  dateInput.value = todayStr();
+
+  function fmt(n){ return Math.round(n).toLocaleString('ko-KR'); }
+
+  function formatDateHeading(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    const days = ['일','월','화','수','목','금','토'];
+    return `${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+  }
+
+  function randomCode(){
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let out = '';
+    for(let i=0;i<6;i++) out += chars[Math.floor(Math.random()*chars.length)];
+    return out;
+  }
+
+  function openSetup(){
+    clearSetupError();
+    const savedConfig = lsGet(LS_CONFIG_KEY);
+    const savedCode = lsGet(LS_CODE_KEY);
+    if(savedConfig) configInput.value = savedConfig;
+    if(savedCode) codeInput.value = savedCode;
+    setupStep1.style.display = savedConfig ? 'none' : '';
+    setupStep2.style.display = savedConfig ? '' : 'none';
+    setupScreen.style.display = 'flex';
+  }
+
+  syncBadge.addEventListener('click', openSetup);
+
+  document.getElementById('configSaveBtn').addEventListener('click', () => {
+    let parsed;
+    try{
+      parsed = JSON.parse(configInput.value.trim());
+      if(!parsed.projectId) throw new Error('projectId 없음');
+    }catch(e){
+      showSetupError('설정 값 형식이 올바르지 않아요. Firebase 콘솔에서 복사한 firebaseConfig 전체(중괄호 포함)를 다시 붙여넣어주세요. 큰따옴표가 깨졌을 수도 있으니, 붙여넣은 후 직접 확인해보세요.');
+      return;
+    }
+    clearSetupError();
+    lsSet(LS_CONFIG_KEY, JSON.stringify(parsed));
+    setupStep1.style.display = 'none';
+    setupStep2.style.display = '';
+  });
+
+  document.getElementById('generateCodeBtn').addEventListener('click', () => {
+    codeInput.value = randomCode();
+    clearSetupError();
+  });
+
+  document.getElementById('codeSaveBtn').addEventListener('click', () => {
+    const code = codeInput.value.trim().toUpperCase();
+    if(!code){
+      showSetupError('동기화 코드를 입력하거나 "코드 새로 만들기"를 눌러주세요.');
+      codeInput.focus();
+      return;
+    }
+    clearSetupError();
+    lsSet(LS_CODE_KEY, code);
+    setupScreen.style.display = 'none';
+    startSync();
+  });
+
+  function startSync(){
+    const configStr = lsGet(LS_CONFIG_KEY);
+    const code = lsGet(LS_CODE_KEY);
+    if(!configStr || !code){
+      openSetup();
+      return;
+    }
+    try{
+      const config = JSON.parse(configStr);
+      if(!firebase.apps.length){
+        firebase.initializeApp(config);
+      }
+      db = firebase.firestore();
+      syncCode = code;
+      syncBadge.textContent = `코드: ${code}`;
+      db.collection('ledgers').doc(syncCode).onSnapshot(docSnap => {
+        const data = docSnap.data();
+        transactions = data && data.transactions ? JSON.parse(data.transactions) : [];
+        render();
+      }, err => {
+        console.error('동기화 오류', err);
+      });
+    }catch(e){
+      console.error('Firebase 초기화 실패', e);
+      openSetup();
+      if(typeof firebase === 'undefined'){
+        showSetupError('외부 스크립트(Firebase)를 불러오지 못했어요. 지금 Claude 채팅 안의 미리보기로 열려 있다면, 파일을 다운로드해서 실제 브라우저(Chrome/Safari)에서 새 탭으로 직접 열어주세요.');
+      }else{
+        showSetupError('연동에 실패했어요: ' + (e && e.message ? e.message : '설정 값을 다시 확인해주세요.'));
+      }
+    }
+  }
+
+  async function saveData(){
+    if(!db || !syncCode) return false;
+    for(let attempt = 0; attempt < 3; attempt++){
+      try{
+        await db.collection('ledgers').doc(syncCode).set({
+          transactions: JSON.stringify(transactions),
+          updatedAt: Date.now()
+        });
+        return true;
+      }catch(e){
+        console.error('저장 실패 (시도 ' + (attempt+1) + ')', e);
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
+    return false;
+  }
+
+  function render(){
+    // balance (all-time)
+    let balance = 0;
+    transactions.forEach(t => balance += t.type === 'income' ? t.amount : -t.amount);
+    balanceEl.innerHTML = `${fmt(balance)}<span>원</span>`;
+
+    // this month totals
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    let mIncome = 0, mExpense = 0;
+    transactions.forEach(t => {
+      if(t.date.startsWith(ym)){
+        if(t.type === 'income') mIncome += t.amount;
+        else mExpense += t.amount;
+      }
+    });
+    monthIncomeEl.textContent = fmt(mIncome) + '원';
+    monthExpenseEl.textContent = fmt(mExpense) + '원';
+
+    // ledger list, grouped by date desc
+    if(transactions.length === 0){
+      ledgerEl.innerHTML = `<div class="empty-state"><span class="big">아직 기록이 없어요</span>위에서 첫 수입 또는 지출을 기록해보세요</div>`;
+      renderCalendar();
+      return;
+    }
+
+    const sorted = [...transactions].sort((a,b) => {
+      if(a.date !== b.date) return b.date.localeCompare(a.date);
+      return b.createdAt - a.createdAt;
+    });
+
+    const groups = {};
+    sorted.forEach(t => {
+      if(!groups[t.date]) groups[t.date] = [];
+      groups[t.date].push(t);
+    });
+
+    let html = '';
+    Object.keys(groups).forEach(date => {
+      html += `<div class="date-group">`;
+      html += `<div class="date-heading">${formatDateHeading(date)}</div>`;
+      groups[date].forEach(t => {
+        const sign = t.type === 'income' ? '+' : '−';
+        html += `
+          <div class="row" data-id="${t.id}">
+            <div class="row-memo ${t.memo ? '' : 'empty'}">${t.memo || (t.type === 'income' ? '수입' : '지출')}</div>
+            <div class="row-right">
+              <div class="row-amount ${t.type}">${sign}${fmt(t.amount)}원</div>
+              <button class="row-del" data-id="${t.id}">×</button>
+            </div>
+          </div>`;
+      });
+      html += `</div>`;
+    });
+    ledgerEl.innerHTML = html;
+
+    document.querySelectorAll('.row-del').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.getAttribute('data-id');
+        transactions = transactions.filter(t => String(t.id) !== id);
+        saveData();
+        render();
+      });
+    });
+
+    renderCalendar();
+  }
+
+  addTrigger.addEventListener('click', () => {
+    if(!panel.classList.contains('open')){
+      selectedDate = null;
+      dateInput.value = todayStr();
+      selectedDateHint.style.display = 'none';
+    }
+    panel.classList.toggle('open');
+  });
+
+  typeExpense.addEventListener('click', () => {
+    currentType = 'expense';
+    typeExpense.classList.add('active');
+    typeIncome.classList.remove('active');
+  });
+  typeIncome.addEventListener('click', () => {
+    currentType = 'income';
+    typeIncome.classList.add('active');
+    typeExpense.classList.remove('active');
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    const amount = parseFloat(amountInput.value);
+    if(!amount || amount <= 0){
+      amountInput.focus();
+      return;
+    }
+    const date = dateInput.value || todayStr();
+    const memo = memoInput.value.trim();
+
+    transactions.push({
+      id: Date.now(),
+      type: currentType,
+      amount: amount,
+      memo: memo,
+      date: date,
+      createdAt: Date.now()
+    });
+
+    await saveData();
+    render();
+
+    amountInput.value = '';
+    memoInput.value = '';
+    if(selectedDate){
+      dateInput.value = selectedDate;
+    }else{
+      dateInput.value = todayStr();
+      panel.classList.remove('open');
+    }
+  });
+
+  // ---------- Screenshot recognition ----------
+  const screenshotTrigger = document.getElementById('screenshotTrigger');
+  const screenshotInput = document.getElementById('screenshotInput');
+  const reviewPanel = document.getElementById('reviewPanel');
+
+  screenshotTrigger.addEventListener('click', () => screenshotInput.click());
+
+  screenshotInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    screenshotTrigger.disabled = true;
+    screenshotTrigger.textContent = '화면 분석 중...';
+    reviewPanel.innerHTML = `<div class="loading-text">스크린샷을 읽고 있어요...</div>`;
+    try{
+      const { base64, mediaType } = await resizeImage(file, 1000);
+      const items = await extractTransactions(base64, mediaType);
+      renderReview(items);
+    }catch(err){
+      reviewPanel.innerHTML = `<div class="loading-text">인식에 실패했어요. 다시 시도해주세요.</div>`;
+    }
+    screenshotTrigger.disabled = false;
+    screenshotTrigger.textContent = '스크린샷으로 인식하기';
+    screenshotInput.value = '';
+  });
+
+  function fileToBase64(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // 큰 스크린샷을 적당한 크기로 줄여서 인식 성공률과 속도를 높임
+  function resizeImage(file, maxWidth){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = () => { img.src = reader.result; };
+      reader.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        resolve({ base64: dataUrl.split(',')[1], mediaType: 'image/jpeg' });
+      };
+      img.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function extractTransactions(base64, mediaType){
+    const prompt = `다음은 한국 금융 앱(토스 등)의 입출금 내역 화면 캡처입니다. 오늘 날짜는 ${todayStr()}입니다. 이미지에 보이는 모든 거래 내역을 추출해서 오직 아래 JSON 배열 형식으로만 답하세요. 설명, 마크다운, 코드블록 기호는 절대 포함하지 마세요.
+[{"type":"income 또는 expense","amount":숫자만,"memo":"거래 상대방 또는 내용","date":"YYYY-MM-DD 형식, 모르면 null"}]
+화면에 연도가 안 보이면 오늘 날짜의 연도를 사용하세요. '오늘', '어제' 같은 표현은 오늘 날짜 기준으로 실제 날짜로 변환하세요. 입금/받음/+ 표시는 income, 출금/보냄/결제/- 표시는 expense 입니다. amount는 콤마와 원 기호를 뺀 숫자만 넣으세요. 거래 건수가 많아도 보이는 모든 항목을 빠짐없이 포함하고, memo는 15자 이내로 간단히 요약하세요.`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 4096,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+              { type: "text", text: prompt }
+            ]
+          }
+        ]
+      })
+    });
+    const data = await response.json();
+    const text = data.content.map(b => b.text || '').join('').trim();
+    let clean = text.replace(/```json|```/g, '').trim();
+    const start = clean.indexOf('[');
+    const end = clean.lastIndexOf(']');
+    if(start !== -1 && end !== -1 && end > start){
+      clean = clean.slice(start, end + 1);
+    }
+    const parsed = JSON.parse(clean);
+    return Array.isArray(parsed) ? parsed : [];
+  }
+
+  function normalizeYear(dateStr){
+    if(!dateStr) return null;
+    const m = dateStr.match(/(\d{4})[-.](\d{1,2})[-.](\d{1,2})/) || dateStr.match(/(\d{1,2})[-.](\d{1,2})/);
+    if(!m) return null;
+    let month, day;
+    if(m.length === 4){ month = parseInt(m[2],10); day = parseInt(m[3],10); }
+    else{ month = parseInt(m[1],10); day = parseInt(m[2],10); }
+    if(!month || !day || month > 12 || day > 31) return null;
+
+    const now = new Date();
+    let year = now.getFullYear();
+    const candidate = new Date(year, month - 1, day);
+    // 캡처 화면에는 보통 연도가 안 보이므로, AI가 추측한 연도는 버리고
+    // 오늘 기준 가까운 연도로 다시 맞춤 (미래로 3일 넘게 벗어나면 작년으로 처리)
+    if(candidate.getTime() - now.getTime() > 3 * 24 * 60 * 60 * 1000){
+      year -= 1;
+    }
+    return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  }
+
+  function renderReview(items){
+    if(items.length === 0){
+      reviewPanel.innerHTML = `<div class="loading-text">인식된 거래 내역이 없어요.</div>`;
+      return;
+    }
+    let html = `<div class="review-card"><div class="review-title">${items.length}건이 인식됐어요. 확인 후 추가하세요.</div>`;
+    items.forEach((it, i) => {
+      const type = it.type === 'income' ? 'income' : 'expense';
+      const amount = Math.abs(parseFloat(it.amount)) || 0;
+      const memo = it.memo || '';
+      const date = normalizeYear(it.date) || todayStr();
+      html += `
+        <div class="review-item" data-index="${i}">
+          <input type="checkbox" class="review-check" checked>
+          <div class="review-fields">
+            <div class="review-row-top">
+              <button class="review-type-btn ${type}" type="button">${type === 'income' ? '수입' : '지출'}</button>
+              <input type="number" class="review-amount" value="${amount}">
+              <input type="date" class="review-date" value="${date}">
+            </div>
+            <input type="text" class="review-memo" value="${memo}" placeholder="메모">
+          </div>
+        </div>`;
+    });
+    html += `<div class="review-actions">
+        <button class="cancel-btn" id="reviewCancel" type="button">취소</button>
+        <button class="save-btn" id="reviewConfirm" type="button">기록에 추가</button>
+      </div></div>`;
+    reviewPanel.innerHTML = html;
+
+    document.querySelectorAll('.review-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const isIncome = btn.classList.contains('income');
+        btn.classList.toggle('income', !isIncome);
+        btn.classList.toggle('expense', isIncome);
+        btn.textContent = !isIncome ? '수입' : '지출';
+      });
+    });
+
+    document.getElementById('reviewCancel').addEventListener('click', () => {
+      reviewPanel.innerHTML = '';
+    });
+
+    document.getElementById('reviewConfirm').addEventListener('click', async () => {
+      document.querySelectorAll('.review-item').forEach(row => {
+        const checked = row.querySelector('.review-check').checked;
+        if(!checked) return;
+        const type = row.querySelector('.review-type-btn').classList.contains('income') ? 'income' : 'expense';
+        const amount = parseFloat(row.querySelector('.review-amount').value);
+        const date = row.querySelector('.review-date').value || todayStr();
+        const memo = row.querySelector('.review-memo').value.trim();
+        if(!amount || amount <= 0) return;
+        transactions.push({ id: Date.now() + Math.random(), type, amount, memo, date, createdAt: Date.now() });
+      });
+      await saveData();
+      render();
+      reviewPanel.innerHTML = '';
+    });
+  }
+
+  // ---------- Calendar ----------
+  const calTitle = document.getElementById('calTitle');
+  const calGrid = document.getElementById('calGrid');
+  const selectedDateHint = document.getElementById('selectedDateHint');
+  let calMonth = new Date();
+  calMonth.setDate(1);
+  let selectedDate = null;
+
+  document.getElementById('calPrev').addEventListener('click', () => {
+    calMonth.setMonth(calMonth.getMonth() - 1);
+    renderCalendar();
+  });
+  document.getElementById('calNext').addEventListener('click', () => {
+    calMonth.setMonth(calMonth.getMonth() + 1);
+    renderCalendar();
+  });
+
+  function selectDate(d){
+    selectedDate = d;
+    dateInput.value = d;
+    panel.classList.add('open');
+    const dt = new Date(d + 'T00:00:00');
+    selectedDateHint.textContent = `${dt.getMonth()+1}월 ${dt.getDate()}일에 기록 추가`;
+    selectedDateHint.style.display = '';
+    amountInput.focus();
+    renderCalendar();
+  }
+
+  function fmtShort(n){
+    if(n >= 10000){
+      const man = n / 10000;
+      return (Number.isInteger(man) ? man : man.toFixed(1)) + '만';
+    }
+    return fmt(n);
+  }
+
+  function renderCalendar(){
+    const year = calMonth.getFullYear();
+    const month = calMonth.getMonth();
+    calTitle.textContent = `${year}년 ${month + 1}월`;
+
+    const firstWeekday = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const dayTotals = {};
+    transactions.forEach(t => {
+      if(!dayTotals[t.date]) dayTotals[t.date] = { income: 0, expense: 0 };
+      if(t.type === 'income') dayTotals[t.date].income += t.amount;
+      else dayTotals[t.date].expense += t.amount;
+    });
+
+    const weekdays = ['일','월','화','수','목','금','토'];
+    let html = weekdays.map(w => `<div class="cal-weekday">${w}</div>`).join('');
+
+    for(let i = 0; i < firstWeekday; i++){
+      html += `<div class="cal-cell empty"></div>`;
+    }
+
+    for(let d = 1; d <= daysInMonth; d++){
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const totals = dayTotals[dateStr];
+      let amtHtml = '';
+      if(totals){
+        if(totals.income > 0) amtHtml += `<div class="cal-amt income">+${fmtShort(totals.income)}</div>`;
+        if(totals.expense > 0) amtHtml += `<div class="cal-amt expense">-${fmtShort(totals.expense)}</div>`;
+      }
+      const isToday = dateStr === todayStr();
+      const isSelected = dateStr === selectedDate;
+      html += `<div class="cal-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" data-date="${dateStr}"><div class="cal-daynum">${d}</div>${amtHtml}</div>`;
+    }
+
+    calGrid.innerHTML = html;
+
+    document.querySelectorAll('.cal-cell[data-date]').forEach(cell => {
+      cell.addEventListener('click', () => selectDate(cell.getAttribute('data-date')));
+    });
+  }
+
+  if(lsGet(LS_CONFIG_KEY) && lsGet(LS_CODE_KEY)){
+    setupScreen.style.display = 'none';
+    startSync();
+  }else{
+    render();
+    openSetup();
+  }
+</script>
+</body>
+</html>
