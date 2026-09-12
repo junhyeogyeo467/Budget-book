@@ -628,10 +628,7 @@
           <div class="stat-value expense" id="monthExpenseEl">0원</div>
         </div>
       </div>
-      <button class="stats-toggle" id="statsToggle" type="button">이번 달 통계 보기</button>
-      <div class="panel stats-collapse" id="statsPanel">
-        <div class="stats-panel-inner" id="statsPanelInner"></div>
-      </div>
+      <div class="stats-panel-inner" id="statsPanelInner" style="margin-top:16px;"></div>
       <button class="stats-toggle" id="fixedToggle" type="button">고정 수입/지출 관리</button>
       <div class="panel stats-collapse" id="fixedPanel">
         <div class="stats-panel-inner" id="fixedPanelInner"></div>
@@ -640,10 +637,6 @@
       <div class="panel stats-collapse" id="catPanel">
         <div class="stats-panel-inner" id="catPanelInner"></div>
       </div>
-    </div>
-
-    <div id="listView">
-      <div class="ledger" id="ledgerEl"></div>
     </div>
   </div>
 
@@ -733,7 +726,6 @@
   const balanceEl = document.getElementById('balanceEl');
   const monthIncomeEl = document.getElementById('monthIncomeEl');
   const monthExpenseEl = document.getElementById('monthExpenseEl');
-  const ledgerEl = document.getElementById('ledgerEl');
   const panel = document.getElementById('panel');
   const addTrigger = document.getElementById('addTrigger');
   const typeExpense = document.getElementById('typeExpense');
@@ -743,8 +735,6 @@
   const memoInput = document.getElementById('memoInput');
   const dateInput = document.getElementById('dateInput');
   const saveBtn = document.getElementById('saveBtn');
-  const statsToggle = document.getElementById('statsToggle');
-  const statsPanel = document.getElementById('statsPanel');
   const statsPanelInner = document.getElementById('statsPanelInner');
   const fixedToggle = document.getElementById('fixedToggle');
   const fixedPanel = document.getElementById('fixedPanel');
@@ -950,53 +940,6 @@
     });
     monthIncomeEl.textContent = fmt(mIncome) + '원';
     monthExpenseEl.textContent = fmt(mExpense) + '원';
-
-    // ledger list, grouped by date desc
-    if(transactions.length === 0){
-      ledgerEl.innerHTML = `<div class="empty-state"><span class="big">아직 기록이 없어요</span>위에서 첫 수입 또는 지출을 기록해보세요</div>`;
-      renderCalendar();
-      return;
-    }
-
-    const sorted = [...transactions].sort((a,b) => {
-      if(a.date !== b.date) return b.date.localeCompare(a.date);
-      return b.createdAt - a.createdAt;
-    });
-
-    const groups = {};
-    sorted.forEach(t => {
-      if(!groups[t.date]) groups[t.date] = [];
-      groups[t.date].push(t);
-    });
-
-    let html = '';
-    Object.keys(groups).forEach(date => {
-      html += `<div class="date-group">`;
-      html += `<div class="date-heading">${formatDateHeading(date)}</div>`;
-      groups[date].forEach(t => {
-        const sign = t.type === 'income' ? '+' : '−';
-        const cat = t.category || (t.type === 'income' ? '기타수입' : '기타');
-        html += `
-          <div class="row" data-id="${t.id}">
-            <div class="row-memo ${t.memo ? '' : 'empty'}">${t.memo || (t.type === 'income' ? '수입' : '지출')} <span style="color:var(--text-dim);font-size:11px;">· ${cat}</span></div>
-            <div class="row-right">
-              <div class="row-amount ${t.type}">${sign}${fmt(t.amount)}원</div>
-              <button class="row-del" data-id="${t.id}">×</button>
-            </div>
-          </div>`;
-      });
-      html += `</div>`;
-    });
-    ledgerEl.innerHTML = html;
-
-    document.querySelectorAll('.row-del').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = e.target.getAttribute('data-id');
-        transactions = transactions.filter(t => String(t.id) !== id);
-        saveData();
-        render();
-      });
-    });
 
     renderCalendar();
   }
@@ -1352,14 +1295,9 @@
       cell.addEventListener('click', () => selectDate(cell.getAttribute('data-date')));
     });
 
-    if(statsPanel.classList.contains('open')) renderStats();
+    renderStats();
     if(selectedDate && dayPopup.style.display !== 'none') renderDayPopup();
   }
-
-  statsToggle.addEventListener('click', () => {
-    statsPanel.classList.toggle('open');
-    if(statsPanel.classList.contains('open')) renderStats();
-  });
 
   function renderStats(){
     const year = calMonth.getFullYear();
