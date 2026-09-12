@@ -598,6 +598,10 @@
       <div class="panel stats-collapse" id="fixedPanel">
         <div class="stats-panel-inner" id="fixedPanelInner"></div>
       </div>
+      <button class="stats-toggle" id="catToggle" type="button">카테고리 관리</button>
+      <div class="panel stats-collapse" id="catPanel">
+        <div class="stats-panel-inner" id="catPanelInner"></div>
+      </div>
     </div>
 
     <button class="add-trigger" id="addTrigger">+ 새 기록 추가</button>
@@ -699,12 +703,17 @@
   const fixedToggle = document.getElementById('fixedToggle');
   const fixedPanel = document.getElementById('fixedPanel');
   const fixedPanelInner = document.getElementById('fixedPanelInner');
+  const catToggle = document.getElementById('catToggle');
+  const catPanel = document.getElementById('catPanel');
+  const catPanelInner = document.getElementById('catPanelInner');
+  let catManageType = 'expense';
   let fixedType = 'expense';
 
-  const EXPENSE_CATS = ['식비','교통','편의점/마트','쇼핑','구독/디지털','송금/이체','기타'];
-  const INCOME_CATS = ['월급','용돈/이체','기타수입'];
+  const DEFAULT_EXPENSE_CATS = ['식비','교통','편의점/마트','쇼핑','구독/디지털','송금/이체','기타'];
+  const DEFAULT_INCOME_CATS = ['월급','용돈/이체','기타수입'];
+  let categories = { expense: [...DEFAULT_EXPENSE_CATS], income: [...DEFAULT_INCOME_CATS] };
 
-  function categoryOptionsFor(type){ return type === 'income' ? INCOME_CATS : EXPENSE_CATS; }
+  function categoryOptionsFor(type){ return type === 'income' ? categories.income : categories.expense; }
 
   function updateCategoryOptions(){
     const cats = categoryOptionsFor(currentType);
@@ -831,8 +840,19 @@
         const data = docSnap.data();
         transactions = data && data.transactions ? JSON.parse(data.transactions) : [];
         fixedItems = data && data.fixedItems ? JSON.parse(data.fixedItems) : [];
+        if(data && data.categories){
+          try{
+            const parsed = JSON.parse(data.categories);
+            categories = {
+              expense: (parsed.expense && parsed.expense.length) ? parsed.expense : [...DEFAULT_EXPENSE_CATS],
+              income: (parsed.income && parsed.income.length) ? parsed.income : [...DEFAULT_INCOME_CATS]
+            };
+          }catch(e){ /* keep current categories */ }
+        }
         render();
+        updateCategoryOptions();
         if(fixedPanel.classList.contains('open')) renderFixed();
+        if(catPanel.classList.contains('open')) renderCategoryManager();
       }, err => {
         console.error('동기화 오류', err);
       });
@@ -854,6 +874,7 @@
         await db.collection('ledgers').doc(syncCode).set({
           transactions: JSON.stringify(transactions),
           fixedItems: JSON.stringify(fixedItems),
+          categories: JSON.stringify(categories),
           updatedAt: Date.now()
         });
         return true;
@@ -1393,6 +1414,68 @@
         fixedItems = fixedItems.filter(f => String(f.id) !== id);
         await saveData();
         renderFixed();
+      });
+    });
+  }
+
+  catToggle.addEventListener('click', () => {
+    catPanel.classList.toggle('open');
+    if(catPanel.classList.contains('open')) renderCategoryManager();
+  });
+
+  function renderCategoryManager(){
+    const list = categories[catManageType];
+
+    function listHtml(){
+      if(list.length === 0) return `<div class="stats-empty">등록된 카테고리가 없어요</div>`;
+      return list.map((c, i) => `
+        <div class="row">
+          <div class="row-memo">${c}</div>
+          <div class="row-right">
+            <button class="row-del cat-del" data-index="${i}">×</button>
+          </div>
+        </div>`).join('');
+    }
+
+    catPanelInner.innerHTML = `
+      <div class="type-toggle">
+        <button class="type-btn ${catManageType === 'expense' ? 'active' : ''}" id="catTypeExpense" type="button">지출 카테고리</button>
+        <button class="type-btn ${catManageType === 'income' ? 'active' : ''}" id="catTypeIncome" type="button">수입 카테고리</button>
+      </div>
+      <div class="field">
+        <label for="newCatInput">새 카테고리 이름</label>
+        <input type="text" id="newCatInput" placeholder="예: 여행, 반려동물">
+      </div>
+      <button class="save-btn" id="addCatBtn" type="button">카테고리 추가</button>
+      <div class="stats-section-title" style="margin-top:18px;">현재 ${catManageType === 'expense' ? '지출' : '수입'} 카테고리</div>
+      ${listHtml()}
+    `;
+
+    document.getElementById('catTypeExpense').addEventListener('click', () => { catManageType = 'expense'; renderCategoryManager(); });
+    document.getElementById('catTypeIncome').addEventListener('click', () => { catManageType = 'income'; renderCategoryManager(); });
+
+    document.getElementById('addCatBtn').addEventListener('click', async () => {
+      const input = document.getElementById('newCatInput');
+      const name = input.value.trim();
+      if(!name) { input.focus(); return; }
+      if(categories[catManageType].includes(name)){
+        input.focus();
+        return;
+      }
+      categories[catManageType].push(name);
+      await saveData();
+      updateCategoryOptions();
+      renderCategoryManager();
+    });
+
+    document.querySelectorAll('.cat-del').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const idx = parseInt(e.target.getAttribute('data-index'), 10);
+        if(categories[catManageType].length <= 1) return;
+        categories[catManageType].splice(idx, 1);
+        await saveData();
+        updateCategoryOptions();
+        renderCategoryManager();
       });
     });
   }
